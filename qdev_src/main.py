@@ -18,7 +18,7 @@ import platform
 import sys
 
 # A-Z QLIB
-# No imports
+import qdev_cgi
 
 ########################################
 # GLOBALS                              #
@@ -37,8 +37,7 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
   sys_version = '@' + platform.uname().node
   
   def do_GET(self):
-    path = self.path.split('#')[0]
-    path = path.split('?')[0]
+    path = self.path.split('#')[0].split('?')[0]
     if path.endswith('/'):
       path += 'index.html'
     elif os.path.isdir(os.environ['_QDEV_SRC'] + path):
@@ -47,7 +46,7 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
     data = b''
     filename = None
     disable_content_headers = False
-    if path == '/':
+    if path == '/index.html':
       self.send_response(Status.TEMPORARY_REDIRECT.value, Status.TEMPORARY_REDIRECT.phrase)
       self.send_header('Location', '/view/' + os.environ['PWD'])
       disable_content_headers = True
@@ -59,17 +58,19 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
         cgiscript_data = compile(cgiscript_data, os.environ['_QDEV_SRC'] + '/webapp/view.py', 'exec', dont_inherit=True)
       
       if cgiscript_data != None:
+        def write(data_):
+          if isinstance(data_, bytes):
+            data += data_
+          elif isinstance(data_, str):
+            data += data_
+          else:
+            data += bytes(data_)
+
         exec(cgiscript_data, {'__builtins__': None}, {**qdev_cgi.CGILocals, 'Response': {
           'send_response': self.send_response,
           'send_header': self.send_header,
           'outstream': {
-            'write': lambda data_:
-              if isinstance(data_, bytes):
-                data += data_
-              elif isinstance(data_, str):
-                data += data_.encode()
-              else:
-                data += bytes(data_)
+            'write': write
           } 
         }})
     else:
