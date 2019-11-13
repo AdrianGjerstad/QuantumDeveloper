@@ -45,20 +45,49 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
       path += '/index.html'
 
     data = b''
-    try:
-      data = open(os.environ['_QDEV_SRC'] + '/webapp' + path, 'rb').read()
-      self.send_response(Status.OK.value, Status.OK.phrase)
-    except FileNotFoundError:
-      data = open(os.environ['_QDEV_SRC'] + '/errorpages/404.html', 'rb').read()
-      self.send_response(Status.NOT_FOUND.value, Status.NOT_FOUND.phrase)
-
-    mime = mimetypes.guess_type(path)
-    if mime is None:
-      mime = 'application/octet-stream'
+    filename = None
+    disable_content_headers = False
+    if path == '/':
+      self.send_response(Status.TEMPORARY_REDIRECT.value, Status.TEMPORARY_REDIRECT.phrase)
+      self.send_header('Location', '/view/' + os.environ['PWD'])
+      disable_content_headers = True
+    elif path.startswith('/view'):
+      path = path[5:]
+      cgiscript_data = None
+      if os.path.isdir(path):
+        cgiscript_data = open(os.environ['_QDEV_SRC'] + '/webapp/view.py', 'r').read()
+        cgiscript_data = compile(cgiscript_data, os.environ['_QDEV_SRC'] + '/webapp/view.py', 'exec', dont_inherit=True)
+      
+      if cgiscript_data != None:
+        exec(cgiscript_data, {'__builtins__': None}, {**qdev_cgi.CGILocals, 'Response': {
+          'send_response': self.send_response,
+          'send_header': self.send_header,
+          'outstream': {
+            'write': lambda data_:
+              if isinstance(data_, bytes):
+                data += data_
+              elif isinstance(data_, str):
+                data += data_.encode()
+              else:
+                data += bytes(data_)
+          } 
+        }})
     else:
-      mime = mime[0]
+      # CDN-Style fallback
+      try:
+        data = open(os.environ['_QDEV_SRC'] + '/webdata' + path, 'rb').read()
+        self.send_response(Status.OK.value, Status.OK.phrase)
+      except FileNotFoundError:
+        data = open(os.environ['_QDEV_SRC'] + '/errorpages/404.html', 'rb').read()
+        self.send_response(Status.NOT_FOUND.value, Status.NOT_FOUND.phrase)
 
-    self.send_header('Content-Type', mime)
+    if not disable_content_headers:
+      mime = mimetypes.guess_type(filename or path)[0]
+      if mime is None:
+        mime = 'application/octet-stream'
+
+      self.send_header('Content-Type', mime)
+      self.send_header('Content-Length', len(data))
 
     self.end_headers()
     self.wfile.write(data)
