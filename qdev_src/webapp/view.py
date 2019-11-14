@@ -1,2 +1,4 @@
-Response.send_response(200, 'OK')
-Response.outstream.write('hello!')
+Response.start_response(http.OK)
+Response.send_data("""
+%s
+""" % Request.path)

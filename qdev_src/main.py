@@ -35,20 +35,32 @@ exit_status = None
 class _QDevRequestHandler(BaseHTTPRequestHandler):
   server_version = 'QuantumDeveloper/' + __version__
   sys_version = '@' + platform.uname().node
+
+  def send_response(self, code, message=None):
+    if isinstance(code, Status):
+      message = code.phrase
+      code = code.value
+
+    self.log_request(code)
+    self.send_response_only(code, message)
+    self.send_header('Server', self.version_string())
+    self.send_header('Date', self.date_time_string())
   
   def do_GET(self):
+    global path
     path = self.path.split('#')[0].split('?')[0]
     if path.endswith('/'):
       path += 'index.html'
     elif os.path.isdir(os.environ['_QDEV_SRC'] + path):
       path += '/index.html'
 
+    global data
     data = b''
     filename = None
     disable_content_headers = False
     if path == '/index.html':
       self.send_response(Status.TEMPORARY_REDIRECT.value, Status.TEMPORARY_REDIRECT.phrase)
-      self.send_header('Location', '/view/' + os.environ['PWD'])
+      self.send_header('Location', '/view' + os.environ['PWD'])
       disable_content_headers = True
     elif path.startswith('/view'):
       path = path[5:]
@@ -59,20 +71,33 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
       
       if cgiscript_data != None:
         def write(data_):
+          global data
           if isinstance(data_, bytes):
             data += data_
           elif isinstance(data_, str):
-            data += data_
+            data += data_.encode()
           else:
             data += bytes(data_)
+        
+        class Response:
+          def __init__(self, sres, shed, serr, sdat):
+            self.start_response = sres
+            self.send_header = shed
+            self.send_error = serr
+            self.send_data = sdat
+        
+        class Request:
+          def __init__(self, path):
+            self.path = path
 
-        exec(cgiscript_data, {'__builtins__': None}, {**qdev_cgi.CGILocals, 'Response': {
-          'send_response': self.send_response,
-          'send_header': self.send_header,
-          'outstream': {
-            'write': write
-          } 
+        exec(cgiscript_data, {'__builtins__': None}, {**qdev_cgi.CGILocals, **{'Response': Response(self.send_response, self.send_header, self.send_error, write), 'Request': Request(path)
         }})
+
+        filename = '_.html'
+      else:
+        data = open(os.environ['_QDEV_SRC'] + '/errorpages/404.html', 'rb').read()
+        filename = '_.html'
+        self.send_response(Status.NOT_FOUND.value, Status.NOT_FOUND.phrase)
     else:
       # CDN-Style fallback
       try:
