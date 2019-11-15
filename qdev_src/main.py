@@ -19,6 +19,7 @@ import sys
 
 # A-Z QLIB
 import qdev_cgi
+import qdev_logging as termlogger
 
 ########################################
 # GLOBALS                              #
@@ -46,6 +47,14 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
     self.send_header('Server', self.version_string())
     self.send_header('Date', self.date_time_string())
   
+  def log_request(self, code='-', size='-1'):
+    if isinstance(code, Status):
+      code = code.value
+    termlogger.log('%s' % (self.requestline))
+
+  def log_message(self, format, *args):
+    termlogger.log(format%args, status='MSG')
+  
   def do_GET(self):
     global path
     path = self.path.split('#')[0].split('?')[0]
@@ -59,7 +68,7 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
     filename = None
     disable_content_headers = False
     if path == '/index.html':
-      self.send_response(Status.TEMPORARY_REDIRECT.value, Status.TEMPORARY_REDIRECT.phrase)
+      self.send_response(Status.TEMPORARY_REDIRECT.value)
       self.send_header('Location', '/view' + os.environ['PWD'])
       disable_content_headers = True
     elif path.startswith('/view'):
@@ -97,15 +106,15 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
       else:
         data = open(os.environ['_QDEV_SRC'] + '/errorpages/404.html', 'rb').read()
         filename = '_.html'
-        self.send_response(Status.NOT_FOUND.value, Status.NOT_FOUND.phrase)
+        self.send_response(Status.NOT_FOUND.value)
     else:
       # CDN-Style fallback
       try:
         data = open(os.environ['_QDEV_SRC'] + '/webdata' + path, 'rb').read()
-        self.send_response(Status.OK.value, Status.OK.phrase)
+        self.send_response(Status.OK.value)
       except FileNotFoundError:
         data = open(os.environ['_QDEV_SRC'] + '/errorpages/404.html', 'rb').read()
-        self.send_response(Status.NOT_FOUND.value, Status.NOT_FOUND.phrase)
+        self.send_response(Status.NOT_FOUND.value)
 
     if not disable_content_headers:
       mime = mimetypes.guess_type(filename or path)[0]
@@ -132,6 +141,7 @@ class _QDevServer(ThreadingHTTPServer):
 def _QDevServerSpawner(httpd):
   global exit_status
   try:
+    termlogger.log('Web Server Started')
     httpd.serve_forever()
   except KeyboardInterrupt:
     httpd.shutdown()
@@ -154,6 +164,8 @@ def main(argc, argv):
     spawner_process.join()
   except SystemExit:
     pass
+
+  termlogger.log('Web Server Stopped')
 
   exit_status = 0
 

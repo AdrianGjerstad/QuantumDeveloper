@@ -29,7 +29,7 @@ function qdev() {
     fi
   fi
   
-  __qdev-log-shell $green'INF'$normal 'Checking status...'
+  __qdev-log-shell $blue'INF'$normal 'Checking status...'
 
   command python3 -V>/dev/null 2>&1
 
@@ -55,8 +55,8 @@ function qdev() {
     return 101
   fi
 
-  __qdev-log-shell $green'INF'$normal 'Status checks succeeded.'
-  __qdev-log-shell $green'INF'$normal 'Starting Quantum Developer script.'
+  __qdev-log-shell $blue'INF'$normal 'Status checks succeeded.'
+  __qdev-log-shell $blue'INF'$normal 'Starting Quantum Developer script.'
 
   python3 $_QDEV_SRC/main.py $@
 
