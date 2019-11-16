@@ -63,14 +63,16 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
   def do_GET(self):
     global path
     path = self.path.split('#')[0].split('?')[0]
-    if path.endswith('/') and path != '/':
+    if path.endswith('/') and path not in ['/', '/index.html']:
       self.send_response(Status.PERMANENT_REDIRECT)
       self.send_header('Location', self.path[:self.path.rfind('/')] + self.path[self.path.rfind('/')+1:])
 
       self.end_headers()
     else:
-      if os.path.isdir(os.environ['_QDEV_SRC'] + path):
+      if os.path.isdir(os.environ['_QDEV_SRC'] + path) and path != '/':
         path += '/index.html'
+      elif os.path.isdir(os.environ['_QDEV_SRC'] + path) and path == '/':
+        path += 'index.html'
 
       global data
       data = b''
