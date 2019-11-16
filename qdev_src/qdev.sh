@@ -57,6 +57,7 @@ function qdev() {
 
   __qdev-log-shell $blue'INF'$normal 'Status checks succeeded.'
   __qdev-log-shell $blue'INF'$normal 'Starting Quantum Developer script.'
+  __qdev-log-shell $blue'INF'$normal 'Press Ctrl+C or Cmd+C to stop.'
 
   python3 $_QDEV_SRC/main.py $@
 
@@ -64,6 +65,9 @@ function qdev() {
   
   stty echo
   read -t 1 -n 10000 discard
+
+  __qdev-log-shell $blue'INF'$normal 'Stopping program.'
+
   return 0
 }
 

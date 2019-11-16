@@ -38,10 +38,13 @@ __LOG_RED = [
 __LOG_BLUE = [
   'DBG',
   'DAT',
-  'REQ',
-  'RES',
   'INF',
   'MSG'
+]
+
+__LOG_PURPLE = [
+  'REQ',
+  'RES'
 ]
 
 def log(text, status='INF'):
@@ -62,6 +65,8 @@ def log(text, status='INF'):
       line += '\033[32m'
     elif status in __LOG_BLUE:
       line += '\033[34m'
+    elif status in __LOG_PURPLE:
+      line += '\033[35m'
   
   line += status
 
