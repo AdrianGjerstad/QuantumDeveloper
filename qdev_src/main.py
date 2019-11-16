@@ -125,6 +125,7 @@ class _QDevRequestHandler(BaseHTTPRequestHandler):
           self.send_response(Status.OK.value)
         except FileNotFoundError:
           data = open(os.environ['_QDEV_SRC'] + '/errorpages/404.html', 'rb').read()
+          filename = 'index.html'
           self.send_response(Status.NOT_FOUND.value)
 
       if not disable_content_headers:
